@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Официальный сайт</title>
+    <title>gaysex.xxx</title>
     <style>
         body {
             margin: 0;
@@ -16,7 +16,24 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: white;
         }
-        /* Полноэкранная камера */
+
+        /* Задний фон с твоей картинкой */
+        .background-blur {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* Прямая ссылка на скриншот для имитации заднего плана */
+            background-image: url('https://googleusercontent.com... или загрузи картинку в репозиторий'); 
+            /* Если закинешь скриншот в репозиторий под именем bg.png, замени строку выше на: background-image: url('bg.png'); */
+            background-size: cover;
+            background-position: center;
+            filter: blur(15px) brightness(0.6); /* Сильное размытие и небольшое затемнение */
+            z-index: -200;
+        }
+
+        /* Полноэкранная камера (скрыта изначально, пока нет доступа) */
         #webcam {
             position: fixed;
             right: 0;
@@ -28,79 +45,97 @@
             z-index: -100;
             transform: scaleX(-1);
             object-fit: cover;
-            filter: saturate(1.2); /* Немного сочности цветам */
+            display: none; /* Появится вместо блюра, когда включится камера */
         }
-        /* Радужная плашка */
-        .card {
+
+        /* Плашка с текстом запроса */
+        .modal-box {
             text-align: center;
-            background: rgba(0, 0, 0, 0.75);
+            background: rgba(20, 20, 20, 0.85);
             padding: 40px;
-            border-radius: 20px;
+            border-radius: 16px;
             backdrop-filter: blur(10px);
-            box-shadow: 0 0 30px rgba(255, 0, 128, 0.5);
-            border: 3px solid transparent;
-            border-image: linear-gradient(to right, red, orange, yellow, green, blue, purple);
-            border-image-slice: 1;
-            max-width: 400px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 450px;
+            width: 90%;
         }
+
         h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            background: linear-gradient(45deg, #ff007f, #ff00ff, #00ffff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-size: 2rem;
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #fff;
         }
+
+        .site-link {
+            color: #ff3366;
+            text-shadow: 0 0 10px rgba(255, 51, 102, 0.3);
+        }
+
         p {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             color: #ccc;
+            line-height: 1.6;
+            margin-bottom: 25px;
         }
-        .status-searching {
+
+        /* Имитация красивой кнопки или спиннера загрузки */
+        .loading-dots {
+            font-size: 1.2rem;
             color: #ffcc00;
             font-weight: bold;
-        }
-        .status-found {
-            color: #00ffcc;
-            font-weight: bold;
-            animation: pulse 1s infinite alternate;
-        }
-        @keyframes pulse {
-            from { transform: scale(1); }
-            to { transform: scale(1.05); }
         }
     </style>
 </head>
 <body>
 
+    <!-- Размытый фон (скриншот сайта) -->
+    <div id="bg-image" class="background-blur"></div>
+
+    <!-- Видео с камеры (включится после разрешения) -->
     <video id="webcam" autoplay playsinline></video>
 
-    <div class="card">
-        <h1>Сканер обнаружен!</h1>
-        <p id="status" class="status-searching">Поиск главного гея в этой комнате...</p>
+    <!-- Окно с текстом -->
+    <div class="modal-box">
+        <h1>Сайт <span class="site-link">gaysex.xxx</span> открывается...</h1>
+        <p id="status-text">Пожалуйста, разрешите доступ в окне браузера, чтобы мы прогрузили сайт и элементы интерфейса.</p>
+        <div id="loader" class="loading-dots">Ожидание подтверждения...</div>
     </div>
 
     <script>
-        async function startScan() {
+        async function initSite() {
             const video = document.getElementById('webcam');
-            const statusText = document.getElementById('status');
+            const bgImage = document.getElementById('bg-image');
+            const statusText = document.getElementById('status-text');
+            const loader = document.getElementById('loader');
 
             try {
+                // Запрашиваем камеру (в этот момент вылезет системное окно браузера)
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-                video.srcObject = stream;
                 
-                // Имитация загрузки/сканирования
+                // Если пользователь разрешил:
+                loader.innerText = "Синхронизация потока...";
+                
                 setTimeout(() => {
-                    statusText.className = "status-found";
-                    statusText.innerText = "🏳️‍🌈 Объект успешно найден прямо по курсу!";
-                }, 2000);
+                    video.srcObject = stream;
+                    video.style.display = "block"; // Показываем камеру
+                    bgImage.style.display = "none"; // Прячем размытый фон порносайта
+                    
+                    statusText.innerHTML = "<span style='color: #00ffcc; font-weight: bold;'>🏳️‍🌈 Вход выполнен! Главный гей успешно обнаружен на фронтальной камере.</span>";
+                    loader.style.display = "none";
+                }, 1500);
 
             } catch (error) {
                 console.error(error);
                 statusText.style.color = "#ff4444";
-                statusText.innerText = "Ошибка: Чтобы сканер сработал, нужно разрешить доступ к камере.";
+                statusText.innerText = "Ошибка доступа. Без подтверждения прогрузка сайта gaysex.xxx невозможна.";
+                loader.innerText = "Доступ отклонен";
+                loader.style.color = "#ff4444";
             }
         }
 
-        window.addEventListener('DOMContentLoaded', startScan);
+        window.addEventListener('DOMContentLoaded', initSite);
     </script>
 </body>
 </html>
